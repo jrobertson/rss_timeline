@@ -23,9 +23,8 @@ class RSStimeline
       @timeline = RSScreator.new rssfile
     else
       @timeline = RSScreator.new
-      @timeline.title = @title || 'My RSStimeline feed'
-      @timeline.description = @description || \
-                                'Generated using the RSStimeline gem'
+      self.title = 'My RSStimeline feed'
+      self.description = 'Generated using the RSStimeline gem'      
     end
     
     @rssfile = rssfile
@@ -50,8 +49,10 @@ class RSStimeline
       if File.exists? rssfile then
 
         rss_cache = SimpleRSS.parse File.read(rssfile)
-        new_rss_items = rss.items - rss_cache.items        
+
+        new_rss_items = rss.items - rss_cache.items
         new_rss_items.each {|item| add_new item}
+        File.write rssfile, rss.source if new_rss_items.any?
         
       else
 
@@ -60,13 +61,33 @@ class RSStimeline
         
       end
     end
+        
+    save()
     
-    if @newupdate then
-      on_update()
-      @newupdate = false
-    end
-    
-    @timeline.save @rssfile    
+  end
+  
+  def description()
+    @timeline.description
+  end
+  
+  def description=(val)
+    @timeline.description = val
+  end
+  
+  def link(val)
+    @timeline.link
+  end
+  
+  def link=(val)
+    @timeline = val
+  end
+  
+  def title()
+    @timeline.title
+  end
+  
+  def title=(val)
+    @timeline.title = val
   end
   
   protected
@@ -85,7 +106,7 @@ class RSStimeline
   
   def add_new(item)
     
-    @timeline.add new_item(item)
+    @timeline.add new_item(item), id: nil
     @newupdate = true
     on_new_item(item)
     
@@ -99,6 +120,17 @@ class RSStimeline
       description: x[:description], 
       date: x[:date] || Time.now.strftime("%a, %d %b %Y %H:%M:%S %z")
     }
+    
+  end
+  
+  def save()
+    
+    return unless @newupdate
+    
+    on_update()
+    @newupdate = false
+    
+    @timeline.save @rssfile        
     
   end
   
