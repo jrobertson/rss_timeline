@@ -52,7 +52,7 @@ class RSStimeline
         rss_cache = SimpleRSS.parse File.read(rssfile)
 
         new_rss_items = rss.items - rss_cache.items
-        new_rss_items.each {|item| add_new item}
+        new_rss_items.reverse.each {|item| add_new item}
         File.write rssfile, rss.source if new_rss_items.any?
         
       else
