@@ -12,7 +12,7 @@ class RSStimeline
   
   attr_accessor :rssfile
 
-  def initialize(feeds=[], rssfile: 'timeline.rss')
+  def initialize(feeds=[], rssfile: 'timeline.rss', xslt: nil)
 
     @source_feeds = feeds
 
@@ -27,6 +27,7 @@ class RSStimeline
       self.description = 'Generated using the RSStimeline gem'      
     end
     
+    @timeline.xslt = xslt if xslt
     @rssfile = rssfile
     @newupdate = false
 
