@@ -13,6 +13,8 @@ class RSStimeline
   attr_accessor :rssfile
 
   def initialize(feeds=[], rssfile: 'timeline.rss', xslt: nil)
+    
+    puts 'inside initialize'
 
     @source_feeds = feeds
 
@@ -28,6 +30,7 @@ class RSStimeline
     end
     
     @timeline.xslt = xslt if xslt
+    puts '@timeline.xslt : ' + @timeline.xslt.inspect
     @rssfile = rssfile
     @newupdate = false
 
@@ -107,7 +110,7 @@ class RSStimeline
   
   def add_new(item)
     
-    @timeline.add new_item(item), id: nil
+    @timeline.add item: new_item(item), id: nil
     @newupdate = true
     on_new_item(item)
     
@@ -126,7 +129,7 @@ class RSStimeline
   
   def save()
     
-    return unless @newupdate
+    #return unless @newupdate
     
     on_update()
     @newupdate = false
