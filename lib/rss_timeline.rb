@@ -12,27 +12,32 @@ class RSStimeline
   
   attr_accessor :rssfile
 
-  def initialize(feeds=[], rssfile: 'timeline.rss', xslt: nil)
+  def initialize(feeds=[], rssfile: 'timeline.rss', xslt: nil, 
+                 filepath: '.', debug: false, target_filepath: nil)
     
-    puts 'inside initialize'
+    @source_feeds, @debug, @rssfile, @newupdate = feeds, debug, rssfile, false
+    @target_filepath = target_filepath
 
-    @source_feeds = feeds
+    puts 'inside initialize' if @debug
 
-    # create a cache directory if it doesn't alread exist
-    FileUtils.mkdir_p 'cache'
+    @filepath = File.join(filepath, 'rss_timeline')
+    @cache_filepath = File.join(@filepath, 'cache')
+
+    # create a cache directory if it doesn't already exist
+    FileUtils.mkdir_p @cache_filepath
 
     if File.exists? rssfile then
-      @timeline = RSScreator.new rssfile
-    else
-      @timeline = RSScreator.new
+      @timeline =RSScreator.new rssfile
+    else      
+
+      @timeline =RSScreator.new
       self.title = 'My RSStimeline feed'
-      self.description = 'Generated using the RSStimeline gem'      
+      self.description = 'Generated using the RSStimeline gem'            
+      
     end
     
     @timeline.xslt = xslt if xslt
-    puts '@timeline.xslt : ' + @timeline.xslt.inspect
-    @rssfile = rssfile
-    @newupdate = false
+    puts '@timeline.xslt : ' + @timeline.xslt.inspect if @debug
 
   end
 
@@ -44,29 +49,46 @@ class RSStimeline
     # check for each feed from the cache.
     # if the feed is in the cache, compare the 2 to find any new items.
     # New items should be added to the main timeline RSS feed
+    
+    updated = false
 
     feeds.each do |feed, rss|
 
-      rssfile = File.join('cache', feed[6..-1].gsub(/\W+/,'').\
+      rssfile = File.join(@cache_filepath, feed[6..-1].gsub(/\W+/,'').\
                                              reverse.slice(0,40).reverse)
       
       if File.exists? rssfile then
 
         rss_cache = SimpleRSS.parse File.read(rssfile)
 
-        new_rss_items = rss.items - rss_cache.items
+        fresh, old = [rss.items, rss_cache.items].map do |feed|
+          feed.clone.each {|x| x.delete :guid }
+        end
+        
+        new_items = fresh - old
+        
+        new_rss_items = new_items.map do |x|
+          rss.items.find {|y| y[:title] == x[:title]}
+        end
+        
         new_rss_items.reverse.each {|item| add_new item}
-        File.write rssfile, rss.source if new_rss_items.any?
+        
+        if new_rss_items.any? then
+          puts 'new_rss_items: ' + new_rss_items.inspect if @debug
+          updated = true
+          File.write rssfile, rss.source 
+        end
         
       else
 
+        updated = true
         add_new rss.items.first
         File.write rssfile, rss.source
         
       end
     end
         
-    save()
+    save() if updated
     
   end
   
@@ -110,6 +132,8 @@ class RSStimeline
   
   def add_new(item)
     
+    puts 'inside add_new: ' + item.inspect if @debug
+    
     @timeline.add item: new_item(item), id: nil
     @newupdate = true
     on_new_item(item)
@@ -118,12 +142,16 @@ class RSStimeline
   
   def new_item(x)
     
-    {
+    h = {
       title: x[:title], 
       link: x[:link], 
       description: x[:description], 
       date: x[:date] || Time.now.strftime("%a, %d %b %Y %H:%M:%S %z")
     }
+    
+    puts 'inside new_item: ' + h.inspect if @debug
+    
+    h
     
   end
   
@@ -134,7 +162,8 @@ class RSStimeline
     on_update()
     @newupdate = false
     
-    @timeline.save @rssfile        
+    @timeline.save File.join(@filepath, @rssfile)
+    @timeline.save File.join(@target_filepath, @rssfile) if @target_filepath
     
   end
   
