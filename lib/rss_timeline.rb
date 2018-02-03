@@ -156,14 +156,12 @@ class RSStimeline
   end
   
   def save()
-    
-    #return unless @newupdate
-    
-    on_update()
+        
     @newupdate = false
     
     @timeline.save File.join(@filepath, @rssfile)
     @timeline.save File.join(@target_filepath, @rssfile) if @target_filepath
+    on_update()    
     
   end
   
