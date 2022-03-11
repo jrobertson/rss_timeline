@@ -4,11 +4,12 @@
 
 require 'simple-rss'
 require 'open-uri'
-require 'fileutils'
 require 'rss_creator'
+require 'rxfreadwrite'
 
 
 class RSStimeline
+  include RXFReadWriteModule
 
   attr_accessor :rssfile
 
@@ -24,9 +25,9 @@ class RSStimeline
     @cache_filepath = File.join(@filepath, 'cache')
 
     # create a cache directory if it doesn't already exist
-    FileUtils.mkdir_p @cache_filepath
+    FileX.mkdir_p @cache_filepath
 
-    if File.exists? rssfile then
+    if FileX.exists? rssfile then
       @timeline = RSScreator.new rssfile
     else
 
@@ -44,7 +45,10 @@ class RSStimeline
   def update()
 
     # fetch the feeds from the web
-    feeds = @source_feeds.map {|feed| [feed, SimpleRSS.parse(URI.open(feed))] }
+    feeds = @source_feeds.map do |feed|
+      #force_encoding('UTF-8')
+      [feed, SimpleRSS.parse(URI.open(feed).read.force_encoding('UTF-8'))]
+    end
 
     # check for each feed from the cache.
     # if the feed is in the cache, compare the 2 to find any new items.
@@ -59,7 +63,7 @@ class RSStimeline
 
       if File.exists? rssfile then
 
-        rss_cache = SimpleRSS.parse File.read(rssfile)
+        rss_cache = SimpleRSS.parse FileX.read(rssfile).force_encoding('UTF-8')
 
         fresh, old = [rss.items, rss_cache.items].map do |feed|
           feed.clone.each {|x| x.delete :guid }
@@ -83,14 +87,14 @@ class RSStimeline
         if new_rss_items.any? then
           puts 'new_rss_items: ' + new_rss_items.inspect if @debug
           updated = true
-          File.write rssfile, rss.source
+          FileX.write rssfile, rss.source
         end
 
       else
 
         updated = true
         add_new rss.items.first
-        File.write rssfile, rss.source
+        FileX.write rssfile, rss.source
 
       end
     end
